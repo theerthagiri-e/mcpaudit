@@ -61,6 +61,46 @@ shell, is deliberately not flagged.
 - Test code is skipped by default.
 - Languages: Python, TypeScript/JavaScript, Go.
 
+## Skill package triage (`--skill`)
+
+MCP servers are one agent supply chain. Installable **skills** — a `SKILL.md`
+plus optional scripts that run inside your coding agent with its file, shell and
+network access — are another, and a code scanner misses the part that matters:
+the dangerous surface is *instructions in natural language*, and the agent, not
+a script, carries them out.
+
+Run it on a skill package before you install one:
+
+```
+mcpaudit path/to/skill --skill
+mcpaudit path/to/skill --skill --format json --fail-on critical
+```
+
+### Checks
+
+| Rule | Severity | What it flags |
+| --- | --- | --- |
+| SKILL101 | critical | Prose that tells the agent to read secrets/credentials/env and send them off-box |
+| SKILL102 | high | Prose that tells the agent to hide actions or output from the user |
+| SKILL103 | high | Prose that tells the agent to ignore/override prior or system instructions or safety |
+| SKILL104 | high | Bundled scripts do more than the package's declared permissions admit |
+| SKILL105 | medium | A script reads environment variables **and** makes network calls (exfil shape) |
+| SKILL106 | high | A dangerous shell construct ships in a script (`curl \| sh`, `chmod 777`, `rm -rf /`, base64-decoded exec) |
+
+### Honest limits (read these)
+
+- **SKILL104 needs a self-declared permission to compare against.** It fires only
+  when the frontmatter declares something like `network: false` and a script then
+  uses the network. Most skills declare nothing, so 104 stays silent there — you
+  lean on 101/102/105/106. This is deliberate: the tool does not invent a
+  permission baseline the package never stated.
+- Prose detection is pattern-based. Paraphrase can evade it; a clean result is
+  not a safety certificate. It is triage to decide what deserves a careful read.
+- It does not execute the skill, does not vet skill *quality*, and says nothing
+  about the behaviour of any marketplace-hosted tools the skill calls.
+- A skill runs its instructions in **your** agent's session. Read every finding in
+  the file before you install.
+
 ## Roadmap
 
 - Call-graph check for "auth defined but never wired" (the most common real bug)
